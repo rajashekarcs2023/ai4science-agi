@@ -120,8 +120,8 @@ def main():
         
         # Data settings
         st.subheader("Data Settings")
-        sample_size = st.slider("Dataset Size", 1000, 20000, 10000, 1000,
-                               help="Number of materials to load from database (more = better predictions)")
+        sample_size = st.slider("Dataset Size", 5000, 50000, 30000, 5000,
+                               help="Number of materials to load from database (more = better predictions, recommended: 30K+)")
         
         # Discovery settings
         st.subheader("Discovery Settings")

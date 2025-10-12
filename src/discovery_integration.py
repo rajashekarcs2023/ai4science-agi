@@ -146,17 +146,14 @@ def run_discovery_pipeline(
     high_voltage = results_df[results_df['predicted_voltage'] >= min_voltage].copy()
     print(f"⚡ Step 4: Found {len(high_voltage)} candidates with voltage ≥ {min_voltage}V\n")
     
+    # If no high-voltage candidates, take top predictions anyway
     if len(high_voltage) == 0:
-        print("⚠ No high-voltage candidates found!")
-        return results_df.nlargest(n_top, 'predicted_voltage'), {
-            'n_generated': len(candidates),
-            'n_novel': len(novel_candidates),
-            'n_high_voltage': 0,
-            'n_validated': 0
-        }
-    
-    # Step 5: Validate top candidates via Materials Project
-    top_candidates = high_voltage.nlargest(min(n_validate, len(high_voltage)), 'predicted_voltage')
+        print(f"⚠ No candidates found with voltage ≥ {min_voltage}V")
+        print(f"   Using top {n_validate} predictions instead...")
+        top_candidates = results_df.nlargest(n_validate, 'predicted_voltage')
+    else:
+        # Step 5: Validate top candidates via Materials Project
+        top_candidates = high_voltage.nlargest(min(n_validate, len(high_voltage)), 'predicted_voltage')
     
     print(f"🔬 Step 5: Validating top {len(top_candidates)} via Materials Project API...")
     validation_results = discovery.validate_via_mp(
@@ -183,11 +180,15 @@ def run_discovery_pipeline(
         discoveries['is_novel'] = True
         discoveries['novelty_score'] = 1.0
     
-    # Calculate discovery score
+    # Calculate discovery score (higher is better)
+    # Normalize to 0-1 scale
+    v_norm = (discoveries['predicted_voltage'] - discoveries['predicted_voltage'].min()) / (discoveries['predicted_voltage'].max() - discoveries['predicted_voltage'].min() + 1e-6)
+    u_norm = 1 - ((discoveries['uncertainty'] - discoveries['uncertainty'].min()) / (discoveries['uncertainty'].max() - discoveries['uncertainty'].min() + 1e-6))
+    
     discoveries['discovery_score'] = (
-        discoveries['predicted_voltage'].rank(pct=True) * 0.5 +
-        (1 - discoveries['uncertainty'].rank(pct=True)) * 0.3 +
-        discoveries['novelty_score'] * 0.2
+        v_norm * 0.5 +  # 50% weight on voltage
+        u_norm * 0.3 +  # 30% weight on low uncertainty
+        discoveries['novelty_score'] * 0.2  # 20% weight on novelty
     )
     
     # Sort by discovery score
