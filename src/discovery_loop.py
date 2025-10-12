@@ -68,6 +68,7 @@ class AutonomousDiscoveryAgent:
         self.model = None
         self.acquisition = None
         self.results = None
+        self.feature_cols = []
         
         np.random.seed(self.config.random_state)
     
@@ -104,6 +105,9 @@ class AutonomousDiscoveryAgent:
         
         # Initialize results
         results = DiscoveryResults(config=self.config)
+        
+        # Store feature columns
+        self.feature_cols = feature_cols or []
         
         # Phase 1: Random initialization
         all_indices = np.arange(len(X))
