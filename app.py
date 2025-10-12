@@ -28,6 +28,10 @@ from src.interpretability import (
 )
 from src.synthesis_advisor import generate_synthesis_route
 from src.material_explainer import explain_material_chemistry, get_material_category
+from src.statistical_validation import (
+    uncertainty_calibration_plot, active_learning_efficiency_curve,
+    statistical_significance_test, coverage_probability
+)
 
 # Page config
 st.set_page_config(
@@ -549,6 +553,88 @@ def main():
                 - Tested only {len(tested_materials)}/{len(df)} materials ({len(tested_materials)/len(df)*100:.1f}%)
                 - **{100 - (len(tested_materials)/len(df)*100):.1f}% cost reduction achieved!**
                 """)
+                
+                # Advanced Statistical Validation
+                st.markdown("---")
+                st.markdown("### 📊 Advanced Statistical Validation")
+                
+                # Uncertainty Calibration
+                st.markdown("#### 1️⃣ Uncertainty Calibration")
+                st.info("""
+                **What this shows:** Are our uncertainty estimates trustworthy?
+                - Points near red line = well-calibrated
+                - When we say ±0.5V, is the actual error ~0.5V?
+                """)
+                
+                cal_fig, cal_error = uncertainty_calibration_plot(
+                    y_true, y_pred, tested_materials['uncertainty'].values
+                )
+                st.plotly_chart(cal_fig, use_container_width=True)
+                
+                if cal_error < 0.3:
+                    st.success(f"✅ **Well-calibrated!** Calibration error: {cal_error:.3f}V (< 0.3V threshold)")
+                else:
+                    st.warning(f"⚠️ Moderate calibration. Error: {cal_error:.3f}V")
+                
+                # Coverage Probability
+                cov_result = coverage_probability(y_true, y_pred, tested_materials['uncertainty'].values)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Coverage (1σ)", f"{cov_result['coverage']:.1f}%",
+                             help="% of true values within predicted ± σ")
+                with col2:
+                    st.metric("Expected Coverage", f"{cov_result['expected']:.1f}%",
+                             help="Should be ~68% for 1σ confidence")
+                
+                if cov_result['well_calibrated']:
+                    st.success("✅ Uncertainty estimates are reliable!")
+                
+                # Active Learning Efficiency
+                st.markdown("---")
+                st.markdown("#### 2️⃣ Active Learning Efficiency Proof")
+                
+                eff_fig, eff_gain = active_learning_efficiency_curve(
+                    results.round_history, 
+                    results.baseline_history
+                )
+                st.plotly_chart(eff_fig, use_container_width=True)
+                
+                if eff_gain > 0:
+                    st.success(f"""
+                    ✅ **Active Learning is {eff_gain:.1f}% more efficient!**
+                    - Reaches same performance with fewer tests
+                    - Intelligent selection vs random guessing
+                    - **Statistical proof of value**
+                    """)
+                
+                # Statistical Significance
+                st.markdown("---")
+                st.markdown("#### 3️⃣ Statistical Significance Test")
+                
+                sig_result = statistical_significance_test(
+                    results.round_history,
+                    results.baseline_history
+                )
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Active Learning Improvement", 
+                             f"{sig_result['al_improvement']:.1f}%")
+                with col2:
+                    st.metric("Random Baseline Improvement", 
+                             f"{sig_result['baseline_improvement']:.1f}%")
+                with col3:
+                    st.metric("Difference", 
+                             f"{sig_result['difference']:.1f}%",
+                             delta=f"{'Significant!' if sig_result['significant'] else 'Not significant'}")
+                
+                if sig_result['significant']:
+                    st.success("""
+                    ✅ **Statistically Significant!** 
+                    Active learning performs measurably better than random selection.
+                    This is not due to chance - it's a real improvement.
+                    """)
             
             else:
                 st.warning("No tested materials available for validation yet")
