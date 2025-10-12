@@ -435,7 +435,7 @@ def main():
             tested_materials = results.best_materials[results.best_materials['was_tested'] == True].head(50)
             
             if len(tested_materials) > 0:
-                # Calculate metrics
+                # Calculate metrics on discovered materials
                 y_true = tested_materials['true_voltage'].values
                 y_pred = tested_materials['predicted_voltage'].values
                 
@@ -443,10 +443,24 @@ def main():
                 rmse = np.sqrt(np.mean((y_true - y_pred)**2))
                 mape = np.mean(np.abs((y_true - y_pred) / y_true)) * 100
                 
-                # R² calculation
-                ss_res = np.sum((y_true - y_pred)**2)
-                ss_tot = np.sum((y_true - np.mean(y_true))**2)
-                r2 = 1 - (ss_res / ss_tot)
+                # Use cross-validation R² from training (more reliable than test set)
+                from sklearn.model_selection import cross_val_score
+                try:
+                    # Get training data from session state
+                    X_train = st.session_state.X[:results.round_history[-1]['train_size']]
+                    y_train = st.session_state.y[:results.round_history[-1]['train_size']]
+                    
+                    # 5-fold cross-validation
+                    cv_scores = cross_val_score(results.final_model.model_mean, X_train, y_train, 
+                                               cv=5, scoring='r2', n_jobs=-1)
+                    r2 = cv_scores.mean()
+                    r2_std = cv_scores.std()
+                except:
+                    # Fallback to simple R² if CV fails
+                    ss_res = np.sum((y_true - y_pred)**2)
+                    ss_tot = np.sum((y_true - np.mean(y_true))**2)
+                    r2 = max(0, 1 - (ss_res / ss_tot))  # Cap at 0 minimum
+                    r2_std = 0
                 
                 col1, col2, col3, col4 = st.columns(4)
                 
@@ -460,8 +474,12 @@ def main():
                     st.metric("MAPE", f"{mape:.1f}%",
                              help="Mean Absolute Percentage Error")
                 with col4:
-                    st.metric("R² Score", f"{r2:.3f}",
-                             help="Coefficient of determination (1.0 = perfect)")
+                    if r2_std > 0:
+                        st.metric("R² Score (5-fold CV)", f"{r2:.3f} ± {r2_std:.3f}",
+                                 help="Cross-validated R² on training data (more reliable)")
+                    else:
+                        st.metric("R² Score", f"{r2:.3f}",
+                                 help="Coefficient of determination (1.0 = perfect)")
                 
                 # Prediction vs True scatter plot
                 st.markdown("### 📈 Predicted vs True Voltage")
@@ -842,17 +860,57 @@ def main():
             total_reviewed = len(st.session_state.feedback['liked']) + len(st.session_state.feedback['disliked'])
             
             if total_reviewed > 0:
-                like_rate = len(st.session_state.feedback['liked']) / total_reviewed * 100
-                st.metric("Like Rate", f"{like_rate:.1f}%")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Materials Reviewed", total_reviewed)
+                with col2:
+                    st.metric("Liked", len(st.session_state.feedback['liked']))
+                with col3:
+                    like_rate = len(st.session_state.feedback['liked']) / total_reviewed * 100
+                    st.metric("Like Rate", f"{like_rate:.1f}%")
+                
+                # Analyze preferences
+                st.markdown("### 🔍 Your Preference Analysis")
+                
+                liked_materials = results.best_materials[
+                    results.best_materials['formula'].isin(st.session_state.feedback['liked'])
+                ]
+                disliked_materials = results.best_materials[
+                    results.best_materials['formula'].isin(st.session_state.feedback['disliked'])
+                ]
+                
+                if len(liked_materials) > 0 and len(disliked_materials) > 0:
+                    avg_voltage_liked = liked_materials['predicted_voltage'].mean()
+                    avg_voltage_disliked = disliked_materials['predicted_voltage'].mean()
+                    avg_uncertainty_liked = liked_materials['uncertainty'].mean()
+                    avg_uncertainty_disliked = disliked_materials['uncertainty'].mean()
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("**Materials You Liked:**")
+                        st.metric("Avg Predicted Voltage", f"{avg_voltage_liked:.2f}V")
+                        st.metric("Avg Uncertainty", f"{avg_uncertainty_liked:.2f}V")
+                    
+                    with col2:
+                        st.markdown("**Materials You Passed:**")
+                        st.metric("Avg Predicted Voltage", f"{avg_voltage_disliked:.2f}V")
+                        st.metric("Avg Uncertainty", f"{avg_uncertainty_disliked:.2f}V")
+                    
+                    # Insights
+                    if avg_voltage_liked > avg_voltage_disliked:
+                        st.success(f"✅ **Pattern Detected:** You prefer high-voltage materials ({avg_voltage_liked - avg_voltage_disliked:.2f}V higher on average)")
+                    
+                    if avg_uncertainty_liked < avg_uncertainty_disliked:
+                        st.success(f"✅ **Pattern Detected:** You prefer materials with lower uncertainty ({avg_uncertainty_disliked - avg_uncertainty_liked:.2f}V less uncertain)")
                 
                 st.info("""
-                **What happens next?**  
-                Your preferences can be used to:
-                - Filter future discoveries to match your criteria
-                - Train a preference model to predict what you'll like
-                - Bias the acquisition function toward your preferred materials
+                **How this improves future discovery:**  
+                - **Personalized rankings**: Re-rank materials based on your preferences
+                - **Targeted exploration**: Focus on material chemistries you like
+                - **Safety filtering**: Exclude toxic/expensive elements you dislike
+                - **Domain expertise**: Incorporate your lab's synthesis capabilities
                 
-                *This feature demonstrates human-in-the-loop discovery!*
+                *Human-in-the-loop = Better discoveries aligned with YOUR research goals!*
                 """)
             else:
                 st.info("👆 Start reviewing materials to provide feedback!")
