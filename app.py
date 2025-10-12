@@ -26,6 +26,7 @@ from src.interpretability import (
     get_feature_importance, plot_feature_importance,
     explain_material, compare_to_known_materials
 )
+from src.synthesis_advisor import generate_synthesis_route
 
 # Page config
 st.set_page_config(
@@ -397,6 +398,24 @@ def main():
                 # Comparison
                 comparison = compare_to_known_materials(best_material['predicted_voltage'])
                 st.markdown(comparison)
+                
+                # Synthesis Route
+                st.markdown("---")
+                if st.button("🧪 Generate Lab Synthesis Protocol", type="primary"):
+                    with st.spinner("Generating synthesis recommendations..."):
+                        synthesis_route = generate_synthesis_route(
+                            formula=best_material['formula'],
+                            predicted_voltage=best_material['predicted_voltage']
+                        )
+                        st.markdown(synthesis_route)
+                        
+                        # Download button
+                        st.download_button(
+                            label="📥 Download Synthesis Protocol",
+                            data=synthesis_route,
+                            file_name=f"synthesis_protocol_{best_material['formula']}.md",
+                            mime="text/markdown"
+                        )
                 
             else:
                 st.warning("Feature importance not available for this model type")
