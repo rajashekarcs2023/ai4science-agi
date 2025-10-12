@@ -47,21 +47,29 @@ def predict_novel_materials(
         )
         
         print(f"   Featurized {len(novel_df)} compositions successfully")
+        print(f"   Novel features: {len(novel_feature_cols)}, Training features: {len(feature_cols)}")
+        
+        # Convert to DataFrame if needed
+        if not isinstance(X_novel, pd.DataFrame):
+            X_novel = pd.DataFrame(X_novel, columns=novel_feature_cols)
         
         # Align features with training features
         # Add missing features as zeros, remove extra features
         for col in feature_cols:
-            if col not in novel_feature_cols:
+            if col not in X_novel.columns:
                 X_novel[col] = 0
         
         # Reorder to match training
         X_novel = X_novel[feature_cols]
         
+        print(f"   Aligned feature matrix shape: {X_novel.shape}")
+        
         # Predict
         print(f"🔮 Predicting properties...")
-        predictions, uncertainties = model.predict(X_novel.values, return_std=True)
+        predictions, uncertainties = model.predict(X_novel.values, return_uncertainty=True)
         
         print(f"   ✓ Generated {len(predictions)} predictions")
+        print(f"   Voltage range: {predictions.min():.3f}V - {predictions.max():.3f}V")
         
         return predictions, uncertainties, novel_df['formula'].values
         
