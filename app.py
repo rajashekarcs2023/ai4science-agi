@@ -22,6 +22,10 @@ from src.visualizations import (
     plot_discovery_efficiency
 )
 from src.discovery_integration import run_discovery_pipeline
+from src.interpretability import (
+    get_feature_importance, plot_feature_importance,
+    explain_material, compare_to_known_materials
+)
 
 # Page config
 st.set_page_config(
@@ -263,7 +267,15 @@ def main():
         st.markdown("---")
         
         # Tabs for different views
-        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📈 Discovery Progress", "🏆 Top Materials", "🌍 Sustainability", "📋 Round Details", "🔬 Novel Discoveries", "👍 Human Feedback"])
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+            "📈 Discovery Progress", 
+            "🏆 Top Materials", 
+            "🔍 Interpretability",
+            "🌍 Sustainability", 
+            "📋 Round Details", 
+            "🔬 Novel Discoveries", 
+            "👍 Human Feedback"
+        ])
         
         with tab1:
             st.subheader("Discovery Curve: Agent vs Random Baseline")
@@ -348,6 +360,48 @@ def main():
             )
         
         with tab3:
+            st.subheader("🔍 Model Interpretability: What Did the AI Learn?")
+            
+            # Feature Importance
+            importance_df = get_feature_importance(results.final_model, st.session_state.feature_names, top_n=15)
+            
+            if importance_df is not None:
+                st.markdown("### 📊 Most Important Features for Voltage Prediction")
+                st.markdown("*These chemical properties have the strongest influence on battery voltage:*")
+                
+                fig_importance = plot_feature_importance(importance_df)
+                st.plotly_chart(fig_importance, use_container_width=True)
+                
+                st.markdown("---")
+                
+                # Explain top material
+                st.markdown("### 🏆 Detailed Analysis: Best Discovered Material")
+                
+                best_material = results.best_materials.iloc[0]
+                
+                # Get feature values for this material
+                material_idx = df[df['formula'] == best_material['formula']].index[0]
+                feature_values = dict(zip(st.session_state.feature_names, st.session_state.X[material_idx]))
+                
+                # Generate explanation
+                explanation = explain_material(
+                    formula=best_material['formula'],
+                    predicted_voltage=best_material['predicted_voltage'],
+                    uncertainty=best_material['uncertainty'],
+                    feature_values=feature_values,
+                    top_features=importance_df['feature'].tolist()
+                )
+                
+                st.markdown(explanation)
+                
+                # Comparison
+                comparison = compare_to_known_materials(best_material['predicted_voltage'])
+                st.markdown(comparison)
+                
+            else:
+                st.warning("Feature importance not available for this model type")
+        
+        with tab4:
             if 'sustainability_score' in results.best_materials.columns:
                 st.subheader("Voltage vs Sustainability Trade-off")
                 fig4 = plot_pareto_front(results.best_materials.head(50), objective1='predicted_voltage')
@@ -366,7 +420,7 @@ def main():
             else:
                 st.info("Enable sustainability in settings to see this analysis")
         
-        with tab4:
+        with tab5:
             st.subheader("Round-by-Round Discovery Details")
             
             for round_data in results.round_history:
@@ -387,7 +441,7 @@ def main():
                     for formula, value in zip(selected_formulas, selected_values):
                         st.write(f"  • {formula}: {value:.3f}V")
         
-        with tab5:
+        with tab6:
             st.subheader("🔬 Autonomous Novel Materials Discovery")
             st.markdown("""
             **Beyond finding the best in the dataset - Let's discover NEW materials!**  
@@ -542,7 +596,7 @@ def main():
             else:
                 st.info("👆 Enable novel discovery and click the button to generate new material candidates")
         
-        with tab6:
+        with tab7:
             st.subheader("👍 Interactive Preference Learning")
             st.markdown("""
             **Teach the AI your preferences!**  
