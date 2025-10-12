@@ -118,19 +118,31 @@ def main():
     with st.sidebar:
         st.header("⚙️ Configuration")
         
-        # Data settings
-        st.subheader("Data Settings")
-        sample_size = st.slider("Dataset Size", 5000, 50000, 30000, 5000,
-                               help="Number of materials to load from database (more = better predictions, recommended: 30K+)")
+        # Mode selection
+        st.subheader("🎬 Mode Selection")
+        demo_mode = st.checkbox("⚡ Quick Demo Mode (2 min)", value=False,
+                               help="Fast mode for live demonstrations")
         
-        # Discovery settings
-        st.subheader("Discovery Settings")
-        n_init = st.slider("Initial Training Size", 50, 200, 100, 25,
-                          help="Number of random materials to start with (larger = better model)")
-        n_rounds = st.slider("Discovery Rounds", 10, 30, 15, 1,
-                            help="Number of active learning iterations (more = better discovery)")
-        batch_size = st.slider("Batch Size", 5, 20, 10, 1,
-                              help="Materials to select per round (higher = faster exploration)")
+        if demo_mode:
+            st.info("🎬 Demo Mode: Optimized for 2-minute presentation")
+            sample_size = 2000
+            n_init = 50
+            n_rounds = 5
+            batch_size = 20
+        else:
+            # Data settings
+            st.subheader("Data Settings")
+            sample_size = st.slider("Dataset Size", 5000, 50000, 30000, 5000,
+                                   help="Number of materials to load from database (more = better predictions, recommended: 30K+)")
+            
+            # Discovery settings
+            st.subheader("Discovery Settings")
+            n_init = st.slider("Initial Training Size", 50, 200, 100, 25,
+                              help="Number of random materials to start with (larger = better model)")
+            n_rounds = st.slider("Discovery Rounds", 10, 30, 15, 1,
+                                help="Number of active learning iterations (more = better discovery)")
+            batch_size = st.slider("Batch Size", 5, 20, 10, 1,
+                                  help="Materials to select per round (higher = faster exploration)")
         
         # Acquisition settings
         st.subheader("Acquisition Strategy")
@@ -251,7 +263,7 @@ def main():
         st.markdown("---")
         
         # Tabs for different views
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Discovery Progress", "🏆 Top Materials", "🌍 Sustainability", "📋 Round Details", "🔬 Novel Discoveries"])
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📈 Discovery Progress", "🏆 Top Materials", "🌍 Sustainability", "📋 Round Details", "🔬 Novel Discoveries", "👍 Human Feedback"])
         
         with tab1:
             st.subheader("Discovery Curve: Agent vs Random Baseline")
@@ -529,6 +541,115 @@ def main():
                     st.warning("No high-voltage novel materials found. Try lowering the minimum voltage threshold.")
             else:
                 st.info("👆 Enable novel discovery and click the button to generate new material candidates")
+        
+        with tab6:
+            st.subheader("👍 Interactive Preference Learning")
+            st.markdown("""
+            **Teach the AI your preferences!**  
+            Review materials and indicate which ones you find promising. The agent learns from your feedback.
+            """)
+            
+            # Initialize feedback in session state
+            if 'feedback' not in st.session_state:
+                st.session_state.feedback = {'liked': [], 'disliked': []}
+            
+            # Get top materials for review
+            review_materials = results.best_materials.head(20)
+            
+            st.markdown("---")
+            st.subheader("📋 Review Materials (Swipe-Style)")
+            
+            # Current material index
+            if 'current_material_idx' not in st.session_state:
+                st.session_state.current_material_idx = 0
+            
+            idx = st.session_state.current_material_idx
+            
+            if idx < len(review_materials):
+                material = review_materials.iloc[idx]
+                
+                # Material card
+                col1, col2, col3 = st.columns([1, 3, 1])
+                
+                with col2:
+                    st.markdown(f"""
+                    <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                padding: 2rem; border-radius: 1rem; color: white; text-align: center;'>
+                        <h2 style='color: white; margin: 0;'>{material['formula']}</h2>
+                        <h3 style='color: #f0f0f0; margin: 0.5rem 0;'>{material['predicted_voltage']:.2f}V ± {material['uncertainty']:.2f}</h3>
+                        <p style='color: #e0e0e0; margin: 0;'>True: {material['true_voltage']:.2f}V</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    st.markdown("")
+                    
+                    # Feature highlights
+                    st.markdown("**Key Properties:**")
+                    st.write(f"• Sustainability Score: {material.get('sustainability_score', 0.5):.3f}")
+                    st.write(f"• Uncertainty: {'Low' if material['uncertainty'] < 1.0 else 'High'}")
+                    st.write(f"• Already Tested: {'Yes ✓' if material.get('was_tested', False) else 'No'}")
+                    
+                    st.markdown("")
+                    
+                    # Action buttons
+                    col_left, col_mid, col_right = st.columns([1, 1, 1])
+                    
+                    with col_left:
+                        if st.button("👎 Pass", key=f"dislike_{idx}", use_container_width=True):
+                            st.session_state.feedback['disliked'].append(material['formula'])
+                            st.session_state.current_material_idx += 1
+                            st.rerun()
+                    
+                    with col_right:
+                        if st.button("👍 Like", key=f"like_{idx}", type="primary", use_container_width=True):
+                            st.session_state.feedback['liked'].append(material['formula'])
+                            st.session_state.current_material_idx += 1
+                            st.rerun()
+                    
+                    # Progress
+                    st.progress((idx + 1) / len(review_materials))
+                    st.caption(f"Material {idx + 1} of {len(review_materials)}")
+            
+            else:
+                st.success("🎉 Review complete!")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("👍 Liked", len(st.session_state.feedback['liked']))
+                with col2:
+                    st.metric("👎 Passed", len(st.session_state.feedback['disliked']))
+                
+                if len(st.session_state.feedback['liked']) > 0:
+                    st.markdown("### Materials You Liked:")
+                    for formula in st.session_state.feedback['liked']:
+                        st.write(f"• {formula}")
+                
+                if st.button("🔄 Reset and Review Again"):
+                    st.session_state.current_material_idx = 0
+                    st.session_state.feedback = {'liked': [], 'disliked': []}
+                    st.rerun()
+            
+            # Feedback summary
+            st.markdown("---")
+            st.markdown("### 📊 Your Preferences")
+            
+            total_reviewed = len(st.session_state.feedback['liked']) + len(st.session_state.feedback['disliked'])
+            
+            if total_reviewed > 0:
+                like_rate = len(st.session_state.feedback['liked']) / total_reviewed * 100
+                st.metric("Like Rate", f"{like_rate:.1f}%")
+                
+                st.info("""
+                **What happens next?**  
+                Your preferences can be used to:
+                - Filter future discoveries to match your criteria
+                - Train a preference model to predict what you'll like
+                - Bias the acquisition function toward your preferred materials
+                
+                *This feature demonstrates human-in-the-loop discovery!*
+                """)
+            else:
+                st.info("👆 Start reviewing materials to provide feedback!")
     
     else:
         # Welcome screen
