@@ -27,6 +27,7 @@ from src.interpretability import (
     explain_material, compare_to_known_materials
 )
 from src.synthesis_advisor import generate_synthesis_route
+from src.material_explainer import explain_material_chemistry, get_material_category
 
 # Page config
 st.set_page_config(
@@ -802,6 +803,31 @@ def main():
                     """, unsafe_allow_html=True)
                     
                     st.markdown("")
+                    
+                    # Chemistry explanation
+                    chemistry_exp = explain_material_chemistry(material['formula'])
+                    category = get_material_category(material['formula'], material['predicted_voltage'])
+                    
+                    with st.expander("🧪 What is this material?", expanded=False):
+                        st.markdown(f"**Category:** {category['type']}")
+                        st.markdown(f"**Voltage Class:** {category['voltage_class']}")
+                        
+                        if category['commercial_analog']:
+                            st.markdown(f"**Similar to:** {category['commercial_analog']}")
+                        
+                        if category['pros']:
+                            st.markdown("**Advantages:**")
+                            for pro in category['pros']:
+                                st.write(f"• {pro}")
+                        
+                        if category['cons']:
+                            st.markdown("**Challenges:**")
+                            for con in category['cons']:
+                                st.write(f"• {con}")
+                        
+                        st.markdown("---")
+                        st.markdown("**Element Chemistry:**")
+                        st.markdown(chemistry_exp)
                     
                     # Feature highlights
                     st.markdown("**Key Properties:**")
