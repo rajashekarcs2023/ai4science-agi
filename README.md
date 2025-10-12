@@ -107,31 +107,7 @@ Round 5: Retrain and repeat...
 
 ---
 
-## 🎥 Demo Features
 
-### Interactive Streamlit UI
-
-1. **Discovery Progress Visualization**
-   - Real-time discovery curve (Agent vs Baseline)
-   - Uncertainty collapse over rounds
-   - Discovery efficiency plot
-
-2. **Top Materials Leaderboard**
-   - Best materials ranked by predicted voltage
-   - Uncertainty quantification (μ ± σ)
-   - True vs predicted values
-
-3. **Sustainability Analysis**
-   - Pareto front: Voltage vs Sustainability trade-off
-   - Element-based cost/toxicity/supply risk scoring
-   - Filter for environmentally responsible materials
-
-4. **Round-by-Round Details**
-   - Training set growth
-   - Selected materials per round
-   - Model confidence evolution
-
----
 
 ## 📁 Project Structure
 
@@ -204,15 +180,6 @@ This approach works for any materials domain:
 
 ---
 
-## 🏆 Judging Criteria Alignment
-
-| Criterion | Our Approach | Evidence |
-|-----------|-------------|----------|
-| **Scientific Relevance** | Real experimental data, sound methods | 214K records, peer-reviewed algorithms |
-| **Novelty** | Autonomous discovery agent | Active learning + sustainability + preferences |
-| **Impact** | 70-90% cost reduction | Generalizable, production-ready |
-| **Execution** | Working prototype | Live demo, reproducible code |
-| **Presentation** | Clear story, interactive UI | 3-min demo script, visualizations |
 
 ---
 
@@ -251,54 +218,3 @@ This approach works for any materials domain:
 - CAMD: Computational Autonomous Materials Discovery
 - ARES: Autonomous Research Systems
 
----
-
-## 🤝 Contributing
-
-We welcome contributions! Areas for improvement:
-- Additional acquisition functions (Thompson Sampling, qEI)
-- More property targets (capacity, conductivity)
-- Advanced uncertainty methods (deep ensembles, MC dropout)
-- Integration with lab automation systems
-
----
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
-
----
-
-## 🎓 Citation
-
-If you use this work, please cite:
-
-```bibtex
-@software{autonomous_discovery_agent,
-  title={Autonomous Discovery Agent: AI-Driven Active Learning for Battery Materials},
-  author={Your Team Name},
-  year={2025},
-  url={https://github.com/rajashekarcs2023/ai4science-agi}
-}
-```
-
----
-
-## 📧 Contact
-
-Questions? Reach out:
-- GitHub Issues: [Open an issue](https://github.com/rajashekarcs2023/ai4science-agi/issues)
-- Email: [your-email@domain.com]
-
----
-
-## 🙏 Acknowledgments
-
-- Battery Materials Database contributors
-- Materials Project team
-- Matminer/pymatgen developers
-- Hackathon organizers and sponsors
-
----
-
-**Built with 🧪 for the future of AI-driven science**
