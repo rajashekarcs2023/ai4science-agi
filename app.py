@@ -83,19 +83,29 @@ def prepare_data(df):
 
 def run_discovery_session(X, y, df, feature_cols, config, use_sustainability):
     """Run discovery and store in session state"""
-    with st.spinner("🚀 Running autonomous discovery... This may take 30-60 seconds..."):
-        agent = AutonomousDiscoveryAgent(config=config)
-        
-        sustainability_scores = df['sustainability_score'].values if use_sustainability else None
-        
-        results = agent.run_discovery(
-            X, y, df,
-            feature_cols=feature_cols,
-            sustainability_scores=sustainability_scores,
-            verbose=False
-        )
-        
-        return results
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    status_text.text(f"🔬 Initializing discovery with {config.n_init} materials...")
+    progress_bar.progress(0.1)
+    
+    agent = AutonomousDiscoveryAgent(config=config)
+    sustainability_scores = df['sustainability_score'].values if use_sustainability else None
+    
+    status_text.text(f"🚀 Running {config.n_rounds} rounds of active learning...")
+    progress_bar.progress(0.2)
+    
+    results = agent.run_discovery(
+        X, y, df,
+        feature_cols=feature_cols,
+        sustainability_scores=sustainability_scores,
+        verbose=False
+    )
+    
+    progress_bar.progress(1.0)
+    status_text.text(f"✅ Discovery complete! Evaluated {len(X)} materials.")
+    
+    return results
 
 
 def main():
@@ -110,17 +120,17 @@ def main():
         
         # Data settings
         st.subheader("Data Settings")
-        sample_size = st.slider("Dataset Size", 1000, 10000, 5000, 500,
-                               help="Number of materials to load from database")
+        sample_size = st.slider("Dataset Size", 1000, 20000, 10000, 1000,
+                               help="Number of materials to load from database (more = better predictions)")
         
         # Discovery settings
         st.subheader("Discovery Settings")
-        n_init = st.slider("Initial Training Size", 20, 200, 50, 10,
-                          help="Number of random materials to start with")
-        n_rounds = st.slider("Discovery Rounds", 5, 20, 10, 1,
-                            help="Number of active learning iterations")
-        batch_size = st.slider("Batch Size", 1, 10, 5, 1,
-                              help="Materials to select per round")
+        n_init = st.slider("Initial Training Size", 50, 200, 100, 25,
+                          help="Number of random materials to start with (larger = better model)")
+        n_rounds = st.slider("Discovery Rounds", 10, 30, 15, 1,
+                            help="Number of active learning iterations (more = better discovery)")
+        batch_size = st.slider("Batch Size", 5, 20, 10, 1,
+                              help="Materials to select per round (higher = faster exploration)")
         
         # Acquisition settings
         st.subheader("Acquisition Strategy")
