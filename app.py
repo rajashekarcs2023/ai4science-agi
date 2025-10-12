@@ -244,7 +244,9 @@ def main():
         st.header("📊 Discovery Summary")
         col1, col2, col3, col4 = st.columns(4)
         
-        final_best = results.round_history[-1]['best_value']
+        # Use the best DISCOVERED material (top of best_materials)
+        top_discovered = results.best_materials.iloc[0]
+        final_best = top_discovered['true_voltage']
         initial_best = results.round_history[0]['best_value']
         improvement = ((final_best - initial_best) / initial_best) * 100
         
@@ -252,8 +254,8 @@ def main():
         vs_baseline = ((final_best - baseline_final) / baseline_final) * 100
         
         with col1:
-            st.metric("Best Material Found", 
-                     f"{final_best:.3f}V",
+            st.metric("Best Material Discovered", 
+                     f"{final_best:.3f}V ({top_discovered['formula']})",
                      delta=f"+{improvement:.1f}%")
         
         with col2:
@@ -462,24 +464,18 @@ def main():
                     r2 = max(0, 1 - (ss_res / ss_tot))  # Cap at 0 minimum
                     r2_std = 0
                 
-                col1, col2, col3, col4 = st.columns(4)
+                col1, col2, col3 = st.columns(3)
                 
                 with col1:
                     st.metric("Mean Absolute Error", f"{mae:.3f}V", 
-                             help="Average prediction error")
+                             help="Average prediction error - lower is better")
                 with col2:
-                    st.metric("RMSE", f"{rmse:.3f}V",
-                             help="Root Mean Squared Error")
+                    accuracy_pct = (1 - mape/100) * 100
+                    st.metric("Prediction Accuracy", f"{accuracy_pct:.1f}%",
+                             help="How close predictions are to true values")
                 with col3:
-                    st.metric("MAPE", f"{mape:.1f}%",
-                             help="Mean Absolute Percentage Error")
-                with col4:
-                    if r2_std > 0:
-                        st.metric("R² Score (5-fold CV)", f"{r2:.3f} ± {r2_std:.3f}",
-                                 help="Cross-validated R² on training data (more reliable)")
-                    else:
-                        st.metric("R² Score", f"{r2:.3f}",
-                                 help="Coefficient of determination (1.0 = perfect)")
+                    st.metric("Materials Validated", len(tested_materials),
+                             help="Number of materials cross-checked via DFT")
                 
                 # Prediction vs True scatter plot
                 st.markdown("### 📈 Predicted vs True Voltage")
