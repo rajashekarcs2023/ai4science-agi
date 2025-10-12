@@ -136,16 +136,16 @@ def main():
         else:
             # Data settings
             st.subheader("Data Settings")
-            sample_size = st.slider("Dataset Size", 5000, 50000, 30000, 5000,
-                                   help="Number of materials to load from database (more = better predictions, recommended: 30K+)")
+            sample_size = st.slider("Dataset Size", 10000, 70000, 50000, 5000,
+                               help="Number of materials to load from database (more = better predictions, recommended: 50K+)")
             
             # Discovery settings
             st.subheader("Discovery Settings")
-            n_init = st.slider("Initial Training Size", 50, 200, 100, 25,
+            n_init = st.slider("Initial Training Size", 100, 500, 200, 50,
                               help="Number of random materials to start with (larger = better model)")
-            n_rounds = st.slider("Discovery Rounds", 10, 30, 15, 1,
+            n_rounds = st.slider("Discovery Rounds", 15, 50, 25, 5,
                                 help="Number of active learning iterations (more = better discovery)")
-            batch_size = st.slider("Batch Size", 5, 20, 10, 1,
+            batch_size = st.slider("Batch Size", 10, 30, 15, 5,
                                   help="Materials to select per round (higher = faster exploration)")
         
         # Acquisition settings
