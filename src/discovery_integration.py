@@ -9,7 +9,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 from src.discovery import NovelMaterialsDiscovery
-from src.feature_engineering import featurize_compositions
+from src.feature_engineering import prepare_features
 from pymatgen.core import Composition
 
 
@@ -33,16 +33,17 @@ def predict_novel_materials(
     """
     print(f"🔮 Featurizing {len(novel_formulas)} novel compositions...")
     
-    # Create temporary dataframe
-    temp_df = pd.DataFrame({'formula': novel_formulas})
+    # Create temporary dataframe with dummy voltage for featurization
+    temp_df = pd.DataFrame({
+        'formula': novel_formulas,
+        'voltage': [0.0] * len(novel_formulas)  # Dummy target, won't be used
+    })
     
     # Featurize using same method as training
     try:
-        X_novel, _, novel_feature_cols, novel_df = featurize_compositions(
+        X_novel, _, novel_feature_cols, novel_df = prepare_features(
             temp_df,
-            formula_col='formula',
-            target_col=None,  # No target for novel materials
-            method=feature_method
+            target_col='voltage'
         )
         
         print(f"   Featurized {len(novel_df)} compositions successfully")
